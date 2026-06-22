@@ -23,10 +23,8 @@ function makeSnippet(text: string, maxLen = 120): string {
   return clean.length > maxLen ? clean.slice(0, maxLen) + '…' : clean
 }
 
-function makeTitle(text: string, role: MessageRole): string {
-  const snippet = makeSnippet(text, 60)
-  const prefix = role === 'user' ? '💬' : '🤖'
-  return `${prefix} ${snippet}`
+function makeTitle(text: string, _role: MessageRole): string {
+  return makeSnippet(text, 60)
 }
 
 // ─── Core Operations ─────────────────────────────────────────
