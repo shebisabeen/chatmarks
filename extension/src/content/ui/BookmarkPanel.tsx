@@ -12,7 +12,7 @@ import { createRoot } from 'react-dom/client'
 import type { Bookmark } from '../../shared/types'
 import { getCurrentConversationBookmarks, deleteBookmark } from '../bookmarkManager'
 import { jumpToMessage } from './highlighter'
-import { UserIcon, ChatGPTIcon } from '../../popup/components/BookmarkCard'
+import { UserIcon } from '../../popup/components/BookmarkCard'
 
 // ─── Component ────────────────────────────────────────────────
 
@@ -245,7 +245,7 @@ function BookmarkItem({
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const roleIcon =
-    bookmark.role === 'user' ? <UserIcon size={13} /> : <ChatGPTIcon size={13} />
+    bookmark.role === 'user' ? <UserIcon size={13} /> : <UserIcon size={13} />
 
   function handleDeleteClick(e: React.MouseEvent) {
     e.stopPropagation()

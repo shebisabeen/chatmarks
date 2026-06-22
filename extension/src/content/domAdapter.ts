@@ -187,9 +187,18 @@ const GEMINI_CONFIG: PlatformConfig = {
     return 'assistant'
   },
 
-  extractMessageId(_el, _index, _conversationId) {
-    // Gemini doesn't expose message IDs — use index-based ID
-    return null
+  extractMessageId(el, index, conversationId) {
+    // Try to get the turn ID from the nearest .conversation-container ancestor
+    // Gemini wraps each turn in: <div class="conversation-container ..." id="79ae97fdc5ab4b9f">
+    const container = el.closest('.conversation-container[id]') as HTMLElement | null
+    const turnId = container?.getAttribute('id')
+    if (turnId) {
+      const tagName = el.tagName?.toLowerCase() ?? ''
+      const role = tagName === 'user-query' ? 'user' : 'assistant'
+      return `gemini_${turnId}_${role}`
+    }
+    // Fallback to index-based ID
+    return `gemini_${conversationId ?? 'unknown'}_${index}`
   },
 
   extractText(el) {
@@ -258,6 +267,28 @@ function findAllClaude(): Element[] {
   return all
 }
 
+/**
+ * For Gemini: collect both user-query and model-response elements in document order.
+ * findAll() only returns the first matching selector, so we need to merge both.
+ */
+function findAllGemini(): Element[] {
+  const userEls = Array.from(document.querySelectorAll('user-query'))
+  const aiEls = Array.from(document.querySelectorAll('model-response'))
+
+  if (userEls.length === 0 && aiEls.length === 0) return []
+
+  // Merge and sort by DOM position
+  const all = [...userEls, ...aiEls]
+  all.sort((a, b) => {
+    const pos = a.compareDocumentPosition(b)
+    if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return -1
+    if (pos & Node.DOCUMENT_POSITION_PRECEDING) return 1
+    return 0
+  })
+
+  return all
+}
+
 function hashText(text: string): string {
   let hash = 5381
   for (let i = 0; i < Math.min(text.length, 200); i++) {
@@ -272,10 +303,15 @@ export function parseMessages(): ParsedMessage[] {
   const platform = detectPlatform()
   const config = getPlatformConfig()
 
-  // Claude needs special handling to get both user + AI elements in order
-  const turnEls = platform === 'claude'
-    ? findAllClaude()
-    : findAll(document, config.messageTurnSelectors)
+  // Claude and Gemini need special handling to get both user + AI elements in order
+  let turnEls: Element[]
+  if (platform === 'claude') {
+    turnEls = findAllClaude()
+  } else if (platform === 'gemini') {
+    turnEls = findAllGemini()
+  } else {
+    turnEls = findAll(document, config.messageTurnSelectors)
+  }
 
   if (turnEls.length === 0) {
     return []

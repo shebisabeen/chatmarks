@@ -1,6 +1,6 @@
 /**
  * BookmarkCard.tsx
- * A single bookmark item in the popup list.
+ * A single bookmark item in the popup list — ChatMarks redesign.
  */
 
 import { useState, useRef, useEffect } from 'react'
@@ -14,91 +14,134 @@ interface BookmarkCardProps {
   isDark?: boolean
 }
 
-// ─── Shared SVG Icons ─────────────────────────────────────────
+// ─── Platform icon config ─────────────────────────────────────
 
-/** Person silhouette — user messages */
-export function UserIcon({ size = 14 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="#6366f1" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
-    </svg>
-  )
+const platformConfig: Record<
+  string,
+  { icon: string; bg: string; label: string; iconBg?: string }
+> = {
+  chatgpt: {
+    icon: '/icons/chatgpt-48.png',
+    bg: '#10a37f',
+    label: 'ChatGPT',
+  },
+  claude: {
+    icon: '/icons/claude-ai-48.png',
+    bg: '#ffffff',
+    label: 'Claude',
+    iconBg: '#ffffff',
+  },
+  gemini: {
+    icon: '/icons/gemini-ai-48.png',
+    bg: '#ffffff',
+    label: 'Gemini',
+    iconBg: '#ffffff',
+  },
 }
 
-/** ChatGPT-style circle logo — AI responses */
-export function ChatGPTIcon({ size = 14 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 41 41" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="M37.532 16.87a9.963 9.963 0 0 0-.856-8.184 10.078 10.078 0 0 0-10.855-4.835 9.964 9.964 0 0 0-6.211-2.681 10.079 10.079 0 0 0-9.592 6.977 9.967 9.967 0 0 0-6.664 4.834 10.08 10.08 0 0 0 1.24 11.817 9.965 9.965 0 0 0 .856 8.185 10.079 10.079 0 0 0 10.855 4.835 9.965 9.965 0 0 0 6.211 2.682 10.08 10.08 0 0 0 9.593-6.979 9.967 9.967 0 0 0 6.663-4.834 10.079 10.079 0 0 0-1.24-11.817zm-17.297 24.12a7.474 7.474 0 0 1-4.799-1.735c.061-.033.168-.091.237-.134l7.964-4.6a1.294 1.294 0 0 0 .655-1.134V19.054l3.366 1.944a.12.12 0 0 1 .066.092v9.299a7.505 7.505 0 0 1-7.49 7.601zm-16.124-6.908a7.471 7.471 0 0 1-.894-5.023c.06.036.162.099.237.141l7.964 4.6a1.297 1.297 0 0 0 1.308 0l9.724-5.614v3.888a.12.12 0 0 1-.048.103l-8.051 4.649a7.504 7.504 0 0 1-10.24-2.744zm-2.09-17.496a7.47 7.47 0 0 1 3.908-3.285c0 .068-.004.19-.004.274v9.201a1.294 1.294 0 0 0 .654 1.132l9.723 5.614-3.366 1.944a.12.12 0 0 1-.114.012L8.017 21.439a7.504 7.504 0 0 1-3.996-8.853zm27.658 6.437l-9.724-5.615 3.367-1.943a.121.121 0 0 1 .114-.012l8.048 4.648a7.498 7.498 0 0 1-1.158 13.528v-9.476a1.293 1.293 0 0 0-.647-1.13zm3.35-5.043c-.059-.037-.162-.099-.236-.141l-7.965-4.6a1.298 1.298 0 0 0-1.308 0l-9.723 5.614v-3.888a.12.12 0 0 1 .048-.103l8.05-4.645a7.497 7.497 0 0 1 11.135 7.763zm-21.063 6.929l-3.367-1.944a.12.12 0 0 1-.065-.092v-9.299a7.497 7.497 0 0 1 12.293-5.756 6.94 6.94 0 0 0-.236.134l-7.965 4.6a1.294 1.294 0 0 0-.654 1.132l-.006 11.225zm1.829-3.943l4.33-2.501 4.332 2.498v4.996l-4.331 2.5-4.331-2.5V21.967z"
-        fill="#10a37f"
-      />
-    </svg>
-  )
-}
+// ─── Platform Icon (rounded square with colored bg) ───────────
 
-/** Platform badge — small colored label showing which AI platform */
-export function PlatformBadge({ platform }: { platform?: Platform }) {
-  if (!platform || platform === 'unknown') return null
+function PlatformIcon({ platform }: { platform?: Platform }) {
+  const config = platform ? platformConfig[platform] : null
 
-  const config: Record<string, { label: string; bg: string; color: string }> = {
-    chatgpt: { label: 'ChatGPT', bg: 'rgba(16,163,127,0.12)', color: '#10a37f' },
-    claude:  { label: 'Claude',  bg: 'rgba(210,130,80,0.12)',  color: '#d28250' },
-    gemini:  { label: 'Gemini',  bg: 'rgba(66,133,244,0.12)',  color: '#4285f4' },
-  }
-
-  const c = config[platform]
-  if (!c) return null
-
-  return (
-    <span
-      style={{
-        fontSize: '9px',
-        fontWeight: 600,
-        padding: '1px 5px',
-        borderRadius: '8px',
-        background: c.bg,
-        color: c.color,
-        letterSpacing: '0.02em',
-        textTransform: 'uppercase',
-        flexShrink: 0,
-      }}
-    >
-      {c.label}
-    </span>
-  )
-}
-
-/** Bookmark ribbon icon */
-export function BookmarkIcon({ size = 14, filled = true, color = '#10a37f', strokeColor = 'rgba(0,0,0,0.4)' }: { size?: number; filled?: boolean; color?: string; strokeColor?: string }) {
-  if (filled) {
+  if (!config) {
+    // Fallback generic bookmark icon
     return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill={color} xmlns="http://www.w3.org/2000/svg">
-        <path d="M5 3a2 2 0 0 0-2 2v16l9-4 9 4V5a2 2 0 0 0-2-2H5z" />
-      </svg>
+      <div
+        style={{
+          width: '44px',
+          height: '44px',
+          borderRadius: '12px',
+          background: 'rgba(99,102,241,0.15)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="#6366f1">
+          <path d="M5 3a2 2 0 0 0-2 2v16l9-4 9 4V5a2 2 0 0 0-2-2H5z" />
+        </svg>
+      </div>
     )
   }
+
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-      <path d="M5 3a2 2 0 0 0-2 2v16l9-4 9 4V5a2 2 0 0 0-2-2H5z" />
+    <div
+      style={{
+        width: '44px',
+        height: '44px',
+        borderRadius: '12px',
+        background: config.bg,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        overflow: 'hidden',
+      }}
+    >
+      <img
+        src={config.icon}
+        alt={config.label}
+        style={{ width: '28px', height: '28px', objectFit: 'contain' }}
+      />
+    </div>
+  )
+}
+
+// ─── SVG Icons ────────────────────────────────────────────────
+
+function EditIcon({ size = 15, color = 'currentColor' }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  )
+}
+
+function TrashIcon({ size = 15, color = 'currentColor' }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
     </svg>
   )
 }
 
 // ─── BookmarkCard ─────────────────────────────────────────────
 
-export function BookmarkCard({ bookmark, onJump, onDelete, onRename, isDark = false }: BookmarkCardProps) {
+export function BookmarkCard({
+  bookmark,
+  onJump,
+  onDelete,
+  onRename,
+  isDark = false,
+}: BookmarkCardProps) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [hovered, setHovered] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editValue, setEditValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const timeAgo = formatTimeAgo(bookmark.createdAt)
-  const roleIcon = bookmark.role === 'user' ? <UserIcon size={14} /> : <ChatGPTIcon size={14} />
   const displayTitle = bookmark.title.replace(/^[💬🤖]\s*/, '')
+  const platformLabel =
+    bookmark.platform && platformConfig[bookmark.platform]
+      ? platformConfig[bookmark.platform].label
+      : bookmark.platform ?? ''
+  const dateStr = formatDate(bookmark.createdAt)
 
-  // Focus input when editing starts
+  const colors = {
+    text: isDark ? '#f0f0f0' : '#111111',
+    muted: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)',
+    border: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+    cardBg: isDark ? '#242424' : '#ffffff',
+    hoverBg: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+  }
+
   useEffect(() => {
     if (editing && inputRef.current) {
       inputRef.current.focus()
@@ -132,202 +175,194 @@ export function BookmarkCard({ bookmark, onJump, onDelete, onRename, isDark = fa
   }
 
   function handleEditKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') {
-      handleEditSave()
-    } else if (e.key === 'Escape') {
-      setEditing(false)
-    }
+    if (e.key === 'Enter') handleEditSave()
+    else if (e.key === 'Escape') setEditing(false)
   }
 
   return (
     <div
       onClick={() => !editing && onJump(bookmark)}
       onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => { setHovered(false); setConfirmDelete(false) }}
+      onMouseLeave={() => {
+        setHovered(false)
+        setConfirmDelete(false)
+      }}
       style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
         padding: '12px 14px',
-        borderRadius: '10px',
+        borderRadius: '12px',
         cursor: editing ? 'default' : 'pointer',
-        border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
+        border: `1px solid ${colors.border}`,
         marginBottom: '8px',
         transition: 'background 0.15s ease',
+        background: hovered && !editing ? colors.hoverBg : colors.cardBg,
         position: 'relative',
-        background: hovered && !editing
-          ? isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.02)'
-          : isDark ? 'rgba(255,255,255,0.04)' : 'transparent',
       }}
-      className="bookmark-card"
       title={editing ? undefined : 'Click to jump to this message'}
     >
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '6px' }}>
-        <span style={{ flexShrink: 0, marginTop: editing ? '6px' : '2px', display: 'inline-flex' }}>{roleIcon}</span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {editing ? (
-            <input
-              ref={inputRef}
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              onKeyDown={handleEditKeyDown}
-              onClick={(e) => e.stopPropagation()}
-              placeholder="Bookmark name…"
-              style={{
-                width: '100%',
-                fontSize: '13px',
-                fontWeight: 600,
-                padding: '2px 6px',
-                borderRadius: '5px',
-                border: `1px solid #10a37f`,
-                outline: 'none',
-                background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
-                color: isDark ? '#ececec' : '#0d0d0d',
-                boxSizing: 'border-box',
-              }}
-            />
-          ) : (
-            <p
-              style={{
-                margin: 0,
-                fontSize: '13px',
-                fontWeight: 600,
-                lineHeight: '1.4',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                color: isDark ? '#ececec' : '#0d0d0d',
-              }}
-            >
-              {displayTitle}
-            </p>
-          )}
-        </div>
+      {/* Platform icon */}
+      <PlatformIcon platform={bookmark.platform} />
 
-        {/* Action buttons — shown on hover or while editing */}
-        <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
-          {editing ? (
-            <>
-              {/* Save */}
-              <button
-                onClick={handleEditSave}
-                title="Save name"
-                style={{
-                  background: '#10a37f',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '2px 7px',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  color: '#fff',
-                  fontWeight: 600,
-                }}
-              >
-                Save
-              </button>
-              {/* Cancel */}
-              <button
-                onClick={(e) => { e.stopPropagation(); setEditing(false) }}
-                title="Cancel"
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '2px 4px',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)',
-                }}
-              >
-                ✕
-              </button>
-            </>
-          ) : hovered ? (
-            <>
-              {/* Edit */}
-              <button
-                onClick={handleEditStart}
-                title="Rename bookmark"
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '2px 4px',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)',
-                  transition: 'color 0.15s',
-                }}
-              >
-                ✏️
-              </button>
-              {/* Delete */}
-              <button
-                onClick={handleDelete}
-                title={confirmDelete ? 'Click again to confirm' : 'Delete bookmark'}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '2px 4px',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  color: confirmDelete ? '#ef4444' : isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)',
-                  transition: 'color 0.15s',
-                }}
-              >
-                {confirmDelete ? '✓' : '🗑️'}
-              </button>
-            </>
-          ) : null}
+      {/* Content */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {editing ? (
+          <input
+            ref={inputRef}
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onKeyDown={handleEditKeyDown}
+            onClick={(e) => e.stopPropagation()}
+            placeholder="Bookmark name…"
+            style={{
+              width: '100%',
+              fontSize: '13px',
+              fontWeight: 600,
+              padding: '3px 7px',
+              borderRadius: '6px',
+              border: `1.5px solid #6366f1`,
+              outline: 'none',
+              background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
+              color: colors.text,
+              boxSizing: 'border-box',
+              marginBottom: '4px',
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              fontSize: '13px',
+              fontWeight: 600,
+              color: colors.text,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              marginBottom: '3px',
+            }}
+          >
+            {displayTitle}
+          </div>
+        )}
+        <div style={{ fontSize: '12px', color: colors.muted, display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span>{platformLabel}</span>
+          {platformLabel && dateStr && (
+            <span style={{ opacity: 0.5 }}>•</span>
+          )}
+          <span>{dateStr}</span>
         </div>
       </div>
 
-      {/* Snippet */}
-      <p
-        style={{
-          margin: '0 0 8px 22px',
-          fontSize: '12px',
-          color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.55)',
-          lineHeight: '1.5',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-        }}
-      >
-        {bookmark.snippet}
-      </p>
-
-      {/* Footer */}
+      {/* Action buttons */}
       <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          marginLeft: '22px',
-        }}
+        style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}
+        onClick={(e) => e.stopPropagation()}
       >
-        <span style={{ fontSize: '11px', color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.4)' }}>{timeAgo}</span>
-        <PlatformBadge platform={bookmark.platform} />
-        {bookmark.tags.length > 0 && (
+        {editing ? (
           <>
-            <span style={{ color: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)', fontSize: '11px' }}>·</span>
-            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-              {bookmark.tags.slice(0, 3).map((tag) => (
-                <span
-                  key={tag}
-                  style={{
-                    fontSize: '10px',
-                    padding: '1px 6px',
-                    borderRadius: '10px',
-                    background: isDark ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)',
-                    color: '#818cf8',
-                    fontWeight: 500,
-                  }}
-                >
-                  #{tag}
-                </span>
-              ))}
-            </div>
+            <button
+              onClick={handleEditSave}
+              title="Save"
+              style={{
+                background: '#6366f1',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '3px 9px',
+                borderRadius: '6px',
+                fontSize: '11px',
+                color: '#fff',
+                fontWeight: 600,
+              }}
+            >
+              Save
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setEditing(false) }}
+              title="Cancel"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '3px 6px',
+                borderRadius: '6px',
+                fontSize: '11px',
+                color: colors.muted,
+              }}
+            >
+              ✕
+            </button>
+          </>
+        ) : (
+          <>
+            {/* Edit button */}
+            <button
+              onClick={handleEditStart}
+              title="Edit bookmark name"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '6px',
+                borderRadius: '7px',
+                color: hovered
+                  ? isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)'
+                  : isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'color 0.15s, background 0.15s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'
+                e.currentTarget.style.color = isDark ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'none'
+                e.currentTarget.style.color = hovered
+                  ? isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)'
+                  : isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'
+              }}
+            >
+              <EditIcon size={15} color="currentColor" />
+            </button>
+
+            {/* Delete button */}
+            <button
+              onClick={handleDelete}
+              title={confirmDelete ? 'Click again to confirm delete' : 'Delete bookmark'}
+              style={{
+                background: confirmDelete ? 'rgba(239,68,68,0.1)' : 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '6px',
+                borderRadius: '7px',
+                color: confirmDelete
+                  ? '#ef4444'
+                  : hovered
+                    ? isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)'
+                    : isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'color 0.15s, background 0.15s',
+              }}
+              onMouseEnter={(e) => {
+                if (!confirmDelete) {
+                  e.currentTarget.style.background = 'rgba(239,68,68,0.08)'
+                  e.currentTarget.style.color = '#ef4444'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!confirmDelete) {
+                  e.currentTarget.style.background = 'none'
+                  e.currentTarget.style.color = hovered
+                    ? isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)'
+                    : isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'
+                }
+              }}
+            >
+              <TrashIcon size={15} color="currentColor" />
+            </button>
           </>
         )}
       </div>
@@ -337,15 +372,50 @@ export function BookmarkCard({ bookmark, onJump, onDelete, onRename, isDark = fa
 
 // ─── Helpers ──────────────────────────────────────────────────
 
-function formatTimeAgo(timestamp: number): string {
-  const diff = Date.now() - timestamp
-  const minutes = Math.floor(diff / 60000)
-  const hours = Math.floor(diff / 3600000)
-  const days = Math.floor(diff / 86400000)
+function formatDate(timestamp: number): string {
+  return new Date(timestamp).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
 
-  if (minutes < 1) return 'just now'
-  if (minutes < 60) return `${minutes}m ago`
-  if (hours < 24) return `${hours}h ago`
-  if (days < 7) return `${days}d ago`
-  return new Date(timestamp).toLocaleDateString()
+// Keep exports for any other files that may import these
+export function UserIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="#6366f1" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+    </svg>
+  )
+}
+
+export function BookmarkIcon({ size = 14, color = '#6366f1' }: { size?: number; filled?: boolean; color?: string; strokeColor?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={color} xmlns="http://www.w3.org/2000/svg">
+      <path d="M5 3a2 2 0 0 0-2 2v16l9-4 9 4V5a2 2 0 0 0-2-2H5z" />
+    </svg>
+  )
+}
+
+export function PlatformBadge({ platform }: { platform?: Platform }) {
+  if (!platform || platform === 'unknown') return null
+  const config = platformConfig[platform]
+  if (!config) return null
+  return (
+    <span
+      style={{
+        fontSize: '9px',
+        fontWeight: 600,
+        padding: '1px 5px',
+        borderRadius: '8px',
+        background: `${config.bg}20`,
+        color: config.bg,
+        letterSpacing: '0.02em',
+        textTransform: 'uppercase',
+        flexShrink: 0,
+      }}
+    >
+      {config.label}
+    </span>
+  )
 }

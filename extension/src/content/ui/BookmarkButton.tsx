@@ -177,6 +177,29 @@ function findActionBar(messageEl: HTMLElement): HTMLElement | null {
     }
   }
 
+  // Gemini (2024-2025) — AI response action bar
+  // The action buttons live inside .buttons-container-v2 within message-actions
+  const geminiSelectors = [
+    '[data-test-id="copy-button"]',
+    '[data-test-id="thumb-up-button"]',
+    '[data-test-id="more-menu-button"]',
+  ]
+  for (const sel of geminiSelectors) {
+    const btn = messageEl.querySelector(sel)
+    if (btn) {
+      // Walk up to find .buttons-container-v2 (the actual row container)
+      let el: HTMLElement | null = btn as HTMLElement
+      while (el && el !== messageEl) {
+        if (el.className && typeof el.className === 'string' && el.className.includes('buttons-container-v2')) {
+          return el
+        }
+        el = el.parentElement
+      }
+      // Fallback: return the button's parent
+      return btn.parentElement as HTMLElement
+    }
+  }
+
   // Strategy 2: Find a flex row with 2-6 icon buttons (the action bar)
   // Walk from the bottom of the article upward
   const allDivs = Array.from(messageEl.querySelectorAll('div'))
