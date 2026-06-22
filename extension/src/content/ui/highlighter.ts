@@ -10,7 +10,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-import { findMessageElement, parseMessages, getConversationIdFromUrl } from '../domAdapter'
+import { findMessageElement, parseMessages, getConversationIdFromUrl, detectPlatform } from '../domAdapter'
 import { injectBookmarkButton } from './BookmarkButton'
 
 const HIGHLIGHT_CLASS = 'cbm-highlight'
@@ -66,6 +66,26 @@ function highlightElement(el: HTMLElement): void {
 // ─── Conversation Scroll Container ───────────────────────────
 
 function getScrollContainer(): HTMLElement | null {
+  const platform = detectPlatform()
+
+  // Platform-specific scroll containers
+  if (platform === 'claude') {
+    // Claude uses a specific scrollable div — find the main conversation scroll area
+    const claudeSelectors = [
+      // Claude's main conversation scroll container
+      'div[class*="overflow-y-auto"]',
+      'main div[class*="overflow-y"]',
+    ]
+    for (const sel of claudeSelectors) {
+      const candidates = Array.from(document.querySelectorAll(sel)) as HTMLElement[]
+      // Pick the tallest scrollable one (the conversation container)
+      const scrollable = candidates
+        .filter((el) => el.scrollHeight > el.clientHeight + 200)
+        .sort((a, b) => b.scrollHeight - a.scrollHeight)
+      if (scrollable.length > 0) return scrollable[0]
+    }
+  }
+
   const selectors = [
     '[class*="overflow-y-auto"]',
     'main [class*="scroll"]',
@@ -92,6 +112,22 @@ async function scrollToRevealMessage(
   messageId: string,
   messageIndex?: number,
 ): Promise<HTMLElement | null> {
+  const platform = detectPlatform()
+
+  // Claude: all messages are always in the DOM (no virtual scrolling).
+  // Just find the element directly — no scanning needed.
+  if (platform === 'claude') {
+    // Give the page a moment to settle after navigation
+    await sleep(300)
+    const el = findMessageElement(messageId)
+    if (el) return el
+
+    // If not found, try re-parsing messages (they may not have been tagged yet)
+    parseMessages()
+    await sleep(200)
+    return findMessageElement(messageId)
+  }
+
   const scrollContainer = getScrollContainer()
 
   if (!scrollContainer) {
@@ -203,11 +239,34 @@ export async function jumpToMessage(
   messageId: string,
   messageIndex?: number,
 ): Promise<boolean> {
+  const platform = detectPlatform()
+
+  // For Claude: all messages are always in the DOM but may not be tagged yet.
+  // Run parseMessages() first to ensure data-cbm-id attributes are set.
+  if (platform === 'claude') {
+    parseMessages()
+    await sleep(100)
+  }
+
   let el = findMessageElement(messageId)
+
+  // Fallback: if the stored messageId doesn't match (e.g. stale ID from old format),
+  // try finding by index. This handles bookmarks saved before ID format changes.
+  if (!el && messageIndex !== undefined) {
+    el = document.querySelector(`[data-cbm-index="${messageIndex}"]`) as HTMLElement | null
+    if (el) {
+      console.log(`[ChatGPT Bookmarks] Found message by index fallback: ${messageIndex}`)
+    }
+  }
 
   if (!el) {
     console.log(`[ChatGPT Bookmarks] Message not in DOM, scrolling to reveal: ${messageId}`)
     el = await scrollToRevealMessage(messageId, messageIndex)
+  }
+
+  // Final fallback after scroll: try index again
+  if (!el && messageIndex !== undefined) {
+    el = document.querySelector(`[data-cbm-index="${messageIndex}"]`) as HTMLElement | null
   }
 
   if (!el) {
@@ -238,8 +297,10 @@ export async function jumpToBookmark(
 ): Promise<void> {
   const currentUrl = window.location.href
 
-  const targetConvId = conversationUrl.match(/\/c\/([0-9a-f-]{36})/i)?.[1]
-  const currentConvId = currentUrl.match(/\/c\/([0-9a-f-]{36})/i)?.[1]
+  // Extract conversation ID from URL — supports ChatGPT (/c/<uuid>) and Claude (/chat/<uuid>)
+  const uuidPattern = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
+  const targetConvId = conversationUrl.match(uuidPattern)?.[0]
+  const currentConvId = currentUrl.match(uuidPattern)?.[0]
 
   const isSameConversation = targetConvId && currentConvId && targetConvId === currentConvId
 

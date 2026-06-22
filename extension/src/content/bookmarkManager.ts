@@ -10,7 +10,7 @@
 import type { Bookmark, ParsedMessage, MessageRole } from '../shared/types'
 import * as db from '../storage/bookmarkDB'
 import { getMessageId } from './messageIdentifier'
-import { getConversationIdFromUrl } from './domAdapter'
+import { getConversationIdFromUrl, detectPlatform } from './domAdapter'
 
 // ─── Helpers ─────────────────────────────────────────────────
 
@@ -57,6 +57,7 @@ export async function createBookmark(
     messageIndex: message.index,
     createdAt: now,
     updatedAt: now,
+    platform: detectPlatform(),
   }
 
   await db.save(bookmark)

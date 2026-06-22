@@ -7,17 +7,19 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import type { Bookmark } from '../shared/types'
+import type { Bookmark, Platform } from '../shared/types'
 import * as db from '../storage/bookmarkDB'
 import { BookmarkCard } from './components/BookmarkCard'
 import { SearchBar } from './components/SearchBar'
 
 type SortOrder = 'newest' | 'oldest'
+type PlatformFilter = Platform | 'all'
 
 export default function App() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
   const [query, setQuery] = useState('')
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest')
+  const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all')
   const [loading, setLoading] = useState(true)
   const [jumpStatus, setJumpStatus] = useState<string | null>(null)
 
@@ -42,8 +44,19 @@ export default function App() {
 
   // ─── Filter + Sort ──────────────────────────────────────────
 
+  // Which platforms actually have bookmarks (for showing filter tabs)
+  const activePlatforms = useMemo(() => {
+    const platforms = new Set(bookmarks.map((b) => b.platform ?? 'unknown'))
+    return Array.from(platforms).filter((p) => p !== 'unknown') as Platform[]
+  }, [bookmarks])
+
   const filtered = useMemo(() => {
     let result = bookmarks
+
+    // Platform filter
+    if (platformFilter !== 'all') {
+      result = result.filter((b) => (b.platform ?? 'unknown') === platformFilter)
+    }
 
     if (query.trim()) {
       const q = query.toLowerCase()
@@ -59,7 +72,7 @@ export default function App() {
     return [...result].sort((a, b) =>
       sortOrder === 'newest' ? b.createdAt - a.createdAt : a.createdAt - b.createdAt,
     )
-  }, [bookmarks, query, sortOrder])
+  }, [bookmarks, query, sortOrder, platformFilter])
 
   // ─── Actions ────────────────────────────────────────────────
 
@@ -154,7 +167,7 @@ export default function App() {
               flex: 1,
             }}
           >
-            ChatGPT Bookmarks
+            AI Bookmarks
           </h1>
           <span
             style={{
@@ -171,6 +184,48 @@ export default function App() {
 
         {/* Search */}
         <SearchBar value={query} onChange={setQuery} isDark={isDark} />
+
+        {/* Platform filter tabs — only shown when bookmarks from multiple platforms exist */}
+        {activePlatforms.length > 1 && (
+          <div style={{ display: 'flex', gap: '4px', marginBottom: '8px', flexWrap: 'wrap' }}>
+            {(['all', ...activePlatforms] as PlatformFilter[]).map((p) => {
+              const platformMeta: Record<string, { label: string; activeColor: string }> = {
+                all:     { label: 'All',     activeColor: colors.accent },
+                chatgpt: { label: 'ChatGPT', activeColor: '#10a37f' },
+                claude:  { label: 'Claude',  activeColor: '#d28250' },
+                gemini:  { label: 'Gemini',  activeColor: '#4285f4' },
+              }
+              const meta = platformMeta[p] ?? { label: p, activeColor: colors.accent }
+              const isActive = platformFilter === p
+              return (
+                <button
+                  key={p}
+                  onClick={() => setPlatformFilter(p)}
+                  style={{
+                    padding: '3px 10px',
+                    borderRadius: '12px',
+                    border: `1px solid ${isActive ? meta.activeColor : isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)'}`,
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    background: isActive
+                      ? `${meta.activeColor}20`
+                      : 'transparent',
+                    color: isActive ? meta.activeColor : colors.muted,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {meta.label}
+                  {p !== 'all' && (
+                    <span style={{ marginLeft: '4px', opacity: 0.7 }}>
+                      {bookmarks.filter((b) => (b.platform ?? 'unknown') === p).length}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        )}
 
         {/* Sort controls */}
         <div style={{ display: 'flex', gap: '6px' }}>

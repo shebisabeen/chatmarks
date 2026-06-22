@@ -1,29 +1,226 @@
 /**
  * domAdapter.ts
  * ─────────────────────────────────────────────────────────────
- * THE single module that knows ChatGPT's DOM structure.
+ * THE single module that knows each AI platform's DOM structure.
  *
- * If OpenAI changes their UI, only this file needs updating.
+ * Supports: ChatGPT, Claude, Gemini
+ * If a platform changes their UI, only this file needs updating.
  * ─────────────────────────────────────────────────────────────
  */
 
-import type { MessageRole, ParsedMessage, ParsedConversation } from '../shared/types'
+import type { MessageRole, ParsedMessage, ParsedConversation, Platform } from '../shared/types'
 
-// ─── Selectors ────────────────────────────────────────────────
+// ─── Platform Detection ───────────────────────────────────────
 
-/**
- * Individual message turn containers — ordered by specificity.
- * ChatGPT 2024/2025 uses article elements with data-testid="conversation-turn-N"
- */
-const MESSAGE_TURN_SELECTORS = [
-  // Most specific — current ChatGPT DOM (2024-2025)
-  'article[data-testid^="conversation-turn-"]',
-  // Fallback variants
-  '[data-testid^="conversation-turn-"]',
-  'article[data-scroll-anchor]',
-  // Generic article fallback
-  'main article',
-]
+export function detectPlatform(url: string = window.location.href): Platform {
+  if (url.includes('chatgpt.com') || url.includes('chat.openai.com')) return 'chatgpt'
+  if (url.includes('claude.ai')) return 'claude'
+  if (url.includes('gemini.google.com')) return 'gemini'
+  return 'unknown'
+}
+
+// ─── Conversation ID ─────────────────────────────────────────
+
+export function getConversationIdFromUrl(url: string = window.location.href): string | null {
+  // ChatGPT: chatgpt.com/c/<uuid> or chat.openai.com/c/<uuid>
+  const chatgptMatch =
+    url.match(/\/c\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i) ??
+    url.match(/\/chat\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i)
+  if (chatgptMatch) return chatgptMatch[1]
+
+  // Claude: claude.ai/chat/<uuid>
+  const claudeMatch = url.match(/claude\.ai\/chat\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i)
+  if (claudeMatch) return claudeMatch[1]
+
+  // Gemini: gemini.google.com/app/<id> (alphanumeric, no UUID format)
+  const geminiMatch = url.match(/gemini\.google\.com\/app\/([a-zA-Z0-9_-]{8,})/i)
+  if (geminiMatch) return `gemini_${geminiMatch[1]}`
+
+  return null
+}
+
+// ─── Platform-specific Selectors ─────────────────────────────
+
+interface PlatformConfig {
+  messageTurnSelectors: string[]
+  extractRole: (el: Element) => MessageRole
+  extractMessageId: (el: Element, index: number, conversationId: string | null) => string | null
+  extractText: (el: Element) => string
+}
+
+// ── ChatGPT ──────────────────────────────────────────────────
+
+const CHATGPT_CONFIG: PlatformConfig = {
+  messageTurnSelectors: [
+    'article[data-testid^="conversation-turn-"]',
+    '[data-testid^="conversation-turn-"]',
+    'article[data-scroll-anchor]',
+    'main article',
+  ],
+
+  extractRole(el) {
+    const withRole = el.querySelector('[data-message-author-role]')
+    if (withRole) {
+      const role = withRole.getAttribute('data-message-author-role')
+      if (role === 'user') return 'user'
+      if (role === 'assistant') return 'assistant'
+    }
+    const testId = el.getAttribute('data-testid') ?? ''
+    if (el.querySelector('[class*="user-message"]')) return 'user'
+    if (el.querySelector('[class*="agent-turn"]')) return 'assistant'
+    if (el.querySelector('[data-testid="user-avatar"]')) return 'user'
+    if (el.querySelector('[data-testid="assistant-avatar"]')) return 'assistant'
+    const turnMatch = testId.match(/conversation-turn-(\d+)/)
+    if (turnMatch) {
+      const n = parseInt(turnMatch[1], 10)
+      return n % 2 === 1 ? 'user' : 'assistant'
+    }
+    return 'assistant'
+  },
+
+  extractMessageId(el) {
+    const withMsgId = el.querySelector('[data-message-id]')
+    if (withMsgId) {
+      const id = withMsgId.getAttribute('data-message-id')
+      if (id) return id
+    }
+    const testId = el.getAttribute('data-testid') ?? ''
+    const uuidMatch = testId.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)
+    if (uuidMatch) return uuidMatch[0]
+    return null
+  },
+
+  extractText(el) {
+    const selectors = [
+      '[data-message-id]',
+      '.markdown.prose',
+      '[class*="prose"]',
+      '[class*="whitespace-pre-wrap"]',
+      '[class*="text-message"]',
+    ]
+    for (const sel of selectors) {
+      try {
+        const found = el.querySelector(sel)
+        if (found && found.textContent?.trim()) return found.textContent.trim()
+      } catch { /* ignore */ }
+    }
+    return el.textContent?.trim() ?? ''
+  },
+}
+
+// ── Claude ───────────────────────────────────────────────────
+
+const CLAUDE_CONFIG: PlatformConfig = {
+  messageTurnSelectors: [
+    // Current Claude DOM (2025) — user message bubble
+    '[data-user-message-bubble="true"]',
+    // AI response — the outer group div that wraps the response + action bar
+    // From the HTML: <div class="group" style="height: auto; opacity: 1; transform: none;">
+    // which contains data-is-streaming inside it
+    '[data-is-streaming]',
+    // Broader fallback: the group div wrapping each AI response turn
+    'div.group[style*="opacity"]',
+  ],
+
+  extractRole(el) {
+    // User messages have data-user-message-bubble="true"
+    if (el.getAttribute('data-user-message-bubble') === 'true') return 'user'
+
+    // AI responses have data-is-streaming attribute
+    if (el.hasAttribute('data-is-streaming')) return 'assistant'
+
+    // Fallback: check for user message testid inside
+    if (el.querySelector('[data-testid="user-message"]')) return 'user'
+
+    return 'assistant'
+  },
+
+  extractMessageId(el, index, conversationId) {
+    // Claude doesn't expose message IDs in the DOM — use index-based ID
+    const role = el.getAttribute('data-user-message-bubble') === 'true' ? 'user' : 'assistant'
+    return `claude_${conversationId ?? 'unknown'}_${role}_${index}`
+  },
+
+  extractText(el) {
+    const selectors = [
+      // Claude user message content
+      '[data-testid="user-message"]',
+      // Claude AI response content
+      '.font-claude-response',
+      // Fallback prose/markdown containers
+      '[class*="prose"]',
+      '[class*="markdown"]',
+      'p',
+    ]
+    for (const sel of selectors) {
+      try {
+        const found = el.querySelector(sel)
+        if (found && found.textContent?.trim()) return found.textContent.trim()
+      } catch { /* ignore */ }
+    }
+    return el.textContent?.trim() ?? ''
+  },
+}
+
+// ── Gemini ───────────────────────────────────────────────────
+
+const GEMINI_CONFIG: PlatformConfig = {
+  messageTurnSelectors: [
+    // Current Gemini DOM (2024-2025)
+    'user-query',
+    'model-response',
+    // Fallback
+    '[class*="user-query"]',
+    '[class*="model-response"]',
+    'message-content',
+  ],
+
+  extractRole(el) {
+    const tagName = el.tagName?.toLowerCase() ?? ''
+    if (tagName === 'user-query') return 'user'
+    if (tagName === 'model-response') return 'assistant'
+
+    const className = el.className ?? ''
+    if (className.includes('user') || className.includes('human')) return 'user'
+    if (className.includes('model') || className.includes('assistant')) return 'assistant'
+
+    return 'assistant'
+  },
+
+  extractMessageId(_el, _index, _conversationId) {
+    // Gemini doesn't expose message IDs — use index-based ID
+    return null
+  },
+
+  extractText(el) {
+    const selectors = [
+      // Gemini's message content
+      'message-content',
+      '[class*="response-content"]',
+      '[class*="query-content"]',
+      '[class*="markdown"]',
+      'p',
+    ]
+    for (const sel of selectors) {
+      try {
+        const found = el.querySelector(sel)
+        if (found && found.textContent?.trim()) return found.textContent.trim()
+      } catch { /* ignore */ }
+    }
+    return el.textContent?.trim() ?? ''
+  },
+}
+
+// ─── Platform Config Resolver ─────────────────────────────────
+
+function getPlatformConfig(): PlatformConfig {
+  const platform = detectPlatform()
+  switch (platform) {
+    case 'claude': return CLAUDE_CONFIG
+    case 'gemini': return GEMINI_CONFIG
+    default: return CHATGPT_CONFIG
+  }
+}
 
 // ─── Helpers ─────────────────────────────────────────────────
 
@@ -39,75 +236,26 @@ function findAll(parent: Element | Document, selectors: string[]): Element[] {
   return []
 }
 
-function extractRole(turnEl: Element): MessageRole {
-  // Most reliable: data-message-author-role on a child element
-  const withRole = turnEl.querySelector('[data-message-author-role]')
-  if (withRole) {
-    const role = withRole.getAttribute('data-message-author-role')
-    if (role === 'user') return 'user'
-    if (role === 'assistant') return 'assistant'
-  }
+/**
+ * For Claude: collect both user bubbles and AI responses in document order.
+ * We can't use a single selector that returns both in order, so we merge and sort.
+ */
+function findAllClaude(): Element[] {
+  const userEls = Array.from(document.querySelectorAll('[data-user-message-bubble="true"]'))
+  const aiEls = Array.from(document.querySelectorAll('[data-is-streaming]'))
 
-  // Check data-testid on the turn element itself
-  const testId = turnEl.getAttribute('data-testid') ?? ''
-  // ChatGPT uses even indices for user, odd for assistant (not reliable, skip)
-  // Check for class hints
-  if (turnEl.querySelector('[class*="user-message"]')) return 'user'
-  if (turnEl.querySelector('[class*="agent-turn"]')) return 'assistant'
+  if (userEls.length === 0 && aiEls.length === 0) return []
 
-  // Check if there's a user avatar vs assistant avatar
-  if (turnEl.querySelector('[data-testid="user-avatar"]')) return 'user'
-  if (turnEl.querySelector('[data-testid="assistant-avatar"]')) return 'assistant'
+  // Merge and sort by DOM position
+  const all = [...userEls, ...aiEls]
+  all.sort((a, b) => {
+    const pos = a.compareDocumentPosition(b)
+    if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return -1
+    if (pos & Node.DOCUMENT_POSITION_PRECEDING) return 1
+    return 0
+  })
 
-  // Fallback: look at the turn number — even = user, odd = assistant in ChatGPT
-  const turnMatch = testId.match(/conversation-turn-(\d+)/)
-  if (turnMatch) {
-    const n = parseInt(turnMatch[1], 10)
-    return n % 2 === 1 ? 'user' : 'assistant'
-  }
-
-  return 'assistant'
-}
-
-function extractMessageId(turnEl: Element): string | null {
-  // Priority 1: data-message-id on a child element
-  const withMsgId = turnEl.querySelector('[data-message-id]')
-  if (withMsgId) {
-    const id = withMsgId.getAttribute('data-message-id')
-    if (id) return id
-  }
-
-  // Priority 2: UUID in data-testid
-  const testId = turnEl.getAttribute('data-testid') ?? ''
-  const uuidMatch = testId.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)
-  if (uuidMatch) return uuidMatch[0]
-
-  return null
-}
-
-function extractText(turnEl: Element): string {
-  // Try message content selectors in order of preference
-  const contentSelectors = [
-    '[data-message-id]',           // ChatGPT's message content wrapper
-    '.markdown.prose',             // Rendered markdown
-    '[class*="prose"]',            // Prose container
-    '[class*="whitespace-pre-wrap"]', // User messages
-    '[class*="text-message"]',     // Text message container
-  ]
-
-  for (const sel of contentSelectors) {
-    try {
-      const el = turnEl.querySelector(sel)
-      if (el && el.textContent?.trim()) {
-        return el.textContent.trim()
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  // Last resort: full text content of the turn
-  return turnEl.textContent?.trim() ?? ''
+  return all
 }
 
 function hashText(text: string): string {
@@ -118,19 +266,16 @@ function hashText(text: string): string {
   return (hash >>> 0).toString(16)
 }
 
-// ─── Conversation ID ─────────────────────────────────────────
-
-export function getConversationIdFromUrl(url: string = window.location.href): string | null {
-  // chatgpt.com/c/<uuid>
-  const match = url.match(/\/c\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i)
-    ?? url.match(/\/chat\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i)
-  return match ? match[1] : null
-}
-
 // ─── Main Parser ─────────────────────────────────────────────
 
 export function parseMessages(): ParsedMessage[] {
-  const turnEls = findAll(document, MESSAGE_TURN_SELECTORS)
+  const platform = detectPlatform()
+  const config = getPlatformConfig()
+
+  // Claude needs special handling to get both user + AI elements in order
+  const turnEls = platform === 'claude'
+    ? findAllClaude()
+    : findAll(document, config.messageTurnSelectors)
 
   if (turnEls.length === 0) {
     return []
@@ -140,12 +285,12 @@ export function parseMessages(): ParsedMessage[] {
   const conversationId = getConversationIdFromUrl()
 
   turnEls.forEach((el, index) => {
-    const role = extractRole(el)
-    const text = extractText(el)
+    const role = config.extractRole(el)
+    const text = config.extractText(el)
 
     if (!text) return
 
-    const nativeId = extractMessageId(el)
+    const nativeId = config.extractMessageId(el, index, conversationId)
     const id = nativeId ?? `${conversationId ?? 'unknown'}:${index}:${hashText(text)}`
 
     // Tag the element for later lookup

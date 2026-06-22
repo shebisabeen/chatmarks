@@ -4,7 +4,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react'
-import type { Bookmark } from '../../shared/types'
+import type { Bookmark, Platform } from '../../shared/types'
 
 interface BookmarkCardProps {
   bookmark: Bookmark
@@ -34,6 +34,38 @@ export function ChatGPTIcon({ size = 14 }: { size?: number }) {
         fill="#10a37f"
       />
     </svg>
+  )
+}
+
+/** Platform badge — small colored label showing which AI platform */
+export function PlatformBadge({ platform }: { platform?: Platform }) {
+  if (!platform || platform === 'unknown') return null
+
+  const config: Record<string, { label: string; bg: string; color: string }> = {
+    chatgpt: { label: 'ChatGPT', bg: 'rgba(16,163,127,0.12)', color: '#10a37f' },
+    claude:  { label: 'Claude',  bg: 'rgba(210,130,80,0.12)',  color: '#d28250' },
+    gemini:  { label: 'Gemini',  bg: 'rgba(66,133,244,0.12)',  color: '#4285f4' },
+  }
+
+  const c = config[platform]
+  if (!c) return null
+
+  return (
+    <span
+      style={{
+        fontSize: '9px',
+        fontWeight: 600,
+        padding: '1px 5px',
+        borderRadius: '8px',
+        background: c.bg,
+        color: c.color,
+        letterSpacing: '0.02em',
+        textTransform: 'uppercase',
+        flexShrink: 0,
+      }}
+    >
+      {c.label}
+    </span>
   )
 }
 
@@ -275,6 +307,7 @@ export function BookmarkCard({ bookmark, onJump, onDelete, onRename, isDark = fa
         }}
       >
         <span style={{ fontSize: '11px', color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.4)' }}>{timeAgo}</span>
+        <PlatformBadge platform={bookmark.platform} />
         {bookmark.tags.length > 0 && (
           <>
             <span style={{ color: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)', fontSize: '11px' }}>·</span>

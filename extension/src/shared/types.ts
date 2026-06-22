@@ -4,6 +4,8 @@
 
 export type MessageRole = 'user' | 'assistant' | 'system'
 
+export type Platform = 'chatgpt' | 'claude' | 'gemini' | 'unknown'
+
 export interface ParsedMessage {
   id: string
   role: MessageRole
@@ -39,6 +41,8 @@ export interface Bookmark {
   role: MessageRole
   /** Index of the message in the conversation (for virtual scroll fallback) */
   messageIndex?: number
+  /** Which AI platform this bookmark is from */
+  platform?: Platform
 }
 
 // ============================================================

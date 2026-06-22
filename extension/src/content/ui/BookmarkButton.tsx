@@ -152,15 +152,19 @@ const HOST_CLASS = 'cbm-btn-host'
  * We look for the action button row and append to it.
  */
 function findActionBar(messageEl: HTMLElement): HTMLElement | null {
-  // Strategy 1: Look for the specific action bar ChatGPT uses
-  // These are the copy/thumbs-up/thumbs-down buttons
+  // Strategy 1: Look for known action bar buttons across all platforms
   const actionBarSelectors = [
     // Current ChatGPT (2025) — action buttons container
     '[data-testid="copy-turn-action-button"]',
     '[data-testid="good-response-turn-action-button"]',
     '[data-testid="bad-response-turn-action-button"]',
     '[data-testid="voice-play-turn-action-button"]',
-    // Older selectors
+    // Claude (2025) — action bar buttons
+    '[data-testid="action-bar-copy"]',
+    '[data-testid="action-bar-edit"]',
+    '[data-testid="action-bar-retry"]',
+    '[data-testid="action-bar-read-aloud"]',
+    // Older / generic selectors
     'button[aria-label="Copy"]',
     'button[aria-label="Good response"]',
   ]
