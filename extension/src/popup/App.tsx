@@ -216,7 +216,7 @@ export default function App() {
 
             {/* Star CTA */}
             <a
-              href="https://github.com/shebisabeen/chatmark"
+              href="https://github.com/shebisabeen/chatmarks"
               target="_blank"
               rel="noopener noreferrer"
               style={{ textDecoration: 'none' }}
