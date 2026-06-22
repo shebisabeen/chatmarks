@@ -1,5 +1,5 @@
 Project Structure
-chatgpt-bookmarks/
+chatmarks/
 │
 ├── extension/
 │   ├── content/

@@ -33,22 +33,29 @@ This data **never leaves your device**. It is not synced to any cloud service, n
 The Extension requests the following Chrome permissions. Each is strictly necessary for the Extension to function:
 
 ### `storage`
+
 Used to save and retrieve your bookmarks locally on your device via `chrome.storage.local`. This is the only place your bookmark data is stored — no external database or server is involved.
 
 ### `activeTab`
+
 Required to identify which AI chat tab is currently active. This allows the Extension to correctly associate new bookmarks with the right conversation when you interact with the popup or side panel.
 
 ### `tabs`
+
 Used to navigate to the specific browser tab containing a bookmarked conversation and to scroll to the exact bookmarked message when you click "Jump to message" from the popup or side panel. The Extension reads tab URLs only to match them against saved bookmark URLs — it does not log, store, or transmit tab information.
 
 ### `sidePanel`
+
 Enables the bookmark list to be displayed in Chrome's native side panel, giving you a persistent view of your bookmarks alongside the AI chat without needing to open a separate popup window.
 
 ### `scripting`
+
 Required to inject the bookmark button UI (the ⭐ star icon) into ChatGPT, Claude, and Gemini pages so you can bookmark messages. Also used to execute scroll and highlight animations when jumping to a bookmarked message. Scripts are only injected into the four supported AI chat domains listed below.
 
 ### Host Permissions: `chatgpt.com`, `chat.openai.com`, `claude.ai`, `gemini.google.com`
+
 Content scripts must be injected into these specific AI chat domains to:
+
 - Detect and identify individual chat messages
 - Render the bookmark button next to messages
 - Enable the "jump to message" scroll and highlight functionality
@@ -91,8 +98,8 @@ If this privacy policy is updated, the "Last Updated" date at the top of this do
 
 If you have any questions about this privacy policy, please open an issue on the GitHub repository:
 
-👉 [https://github.com/shebisabeen/chatgpt-bookmarks/issues](https://github.com/shebisabeen/chatgpt-bookmarks/issues)
+👉 [https://github.com/shebisabeen/chatmarks/issues](https://github.com/shebisabeen/chatmarks/issues)
 
 ---
 
-*ChatMarks is an open-source project. You can review the full source code at [https://github.com/shebisabeen/chatgpt-bookmarks](https://github.com/shebisabeen/chatgpt-bookmarks).*
+*ChatMarks is an open-source project. You can review the full source code at [https://github.com/shebisabeen/chatmarks](https://github.com/shebisabeen/chatmarks).*
