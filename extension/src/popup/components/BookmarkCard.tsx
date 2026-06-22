@@ -199,6 +199,7 @@ export function BookmarkCard({
         transition: 'background 0.15s ease',
         background: hovered && !editing ? colors.hoverBg : colors.cardBg,
         position: 'relative',
+        boxShadow: isDark ? '0 1px 4px rgba(0,0,0,0.3)' : '0 1px 4px rgba(0,0,0,0.08)',
       }}
       title={editing ? undefined : 'Click to jump to this message'}
     >

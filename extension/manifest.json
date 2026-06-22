@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "AI Chat Bookmarks",
+  "name": "ChatMarks",
   "version": "1.1.0",
-  "description": "Bookmark messages inside ChatGPT, Claude, and Gemini conversations",
+  "description": "Bookmark chat messages across ChatGPT, Claude & Gemini",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",

@@ -172,6 +172,7 @@ export default function App() {
             padding: '16px', borderRadius: '14px',
             background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
             marginBottom: '24px',
+            boxShadow: isDark ? '0 1px 4px rgba(0,0,0,0.3)' : '0 1px 4px rgba(0,0,0,0.08)',
           }}>
             <img
               src="/icons/icon48.png"
@@ -181,7 +182,9 @@ export default function App() {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: '16px', fontWeight: 700, color: colors.text }}>ChatMarks</div>
               <div style={{ fontSize: '12px', color: colors.muted, marginTop: '2px' }}>
-                Bookmark chats across ChatGPT, Claude &amp; Gemini
+              Bookmark chat messages across
+              <br />
+              ChatGPT, Claude &amp; Gemini
               </div>
               <div style={{
                 display: 'inline-block', marginTop: '6px',
@@ -221,25 +224,27 @@ export default function App() {
               <div
                 style={{
                   display: 'flex', alignItems: 'center', gap: '12px',
-                  padding: '12px 14px', borderRadius: '12px',
-                  background: isDark ? 'rgba(251,191,36,0.1)' : 'rgba(251,191,36,0.08)',
-                  border: `1px solid rgba(251,191,36,0.25)`,
-                  cursor: 'pointer', transition: 'background 0.15s',
+                  padding: '13px 14px', borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'opacity 0.15s, transform 0.15s',
+                  boxShadow: '0 2px 8px rgba(217,119,6,0.35)',
                 }}
-                onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = isDark ? 'rgba(251,191,36,0.18)' : 'rgba(251,191,36,0.15)')}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = isDark ? 'rgba(251,191,36,0.1)' : 'rgba(251,191,36,0.08)')}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.opacity = '0.92'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-1px)' }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.opacity = '1'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)' }}
               >
                 <div style={{
                   width: '34px', height: '34px', borderRadius: '10px',
-                  background: 'rgba(251,191,36,0.2)',
+                  background: 'rgba(255,255,255,0.25)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '17px', flexShrink: 0,
+                  fontSize: '18px', flexShrink: 0,
                 }}>⭐</div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: isDark ? '#fbbf24' : '#92400e' }}>Star on GitHub</div>
-                  <div style={{ fontSize: '11px', color: isDark ? 'rgba(251,191,36,0.6)' : 'rgba(146,64,14,0.7)', marginTop: '1px' }}>If you find it useful, a ⭐ means a lot!</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>Star on GitHub</div>
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.85)', marginTop: '1px' }}>If you find it useful, a ⭐ means a lot!</div>
                 </div>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={isDark ? 'rgba(251,191,36,0.5)' : 'rgba(146,64,14,0.4)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                   <polyline points="15 3 21 3 21 9" />
                   <line x1="10" y1="14" x2="21" y2="3" />
@@ -300,7 +305,9 @@ export default function App() {
               ChatMarks
             </div>
             <div style={{ fontSize: '11px', color: colors.muted, marginTop: '1px', lineHeight: '1.3' }}>
-              Bookmark chat messages across ChatGPT, Gemini, Claude.
+              Bookmark chat messages across 
+              <br />
+              ChatGPT, Claude & Gemini.
             </div>
           </div>
 
@@ -420,7 +427,8 @@ export default function App() {
                 color: isActive ? '#6366f1' : colors.muted,
                 transition: 'all 0.15s',
                 whiteSpace: 'nowrap',
-                flex: 1,
+                minWidth: tab.id === 'chatgpt' ? '105px' : undefined,
+                justifyContent: 'center',
               }}
             >
               {tab.icon ? (
@@ -503,6 +511,7 @@ function SettingsLink({ href, icon, label, sublabel, colors }: SettingsLinkProps
           border: `1px solid ${colors.border}`,
           background: colors.cardBg,
           cursor: 'pointer', transition: 'background 0.15s',
+          boxShadow: isDark ? '0 1px 4px rgba(0,0,0,0.3)' : '0 1px 4px rgba(0,0,0,0.08)',
         }}
         onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = colors.hoverBg)}
         onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = colors.cardBg)}
