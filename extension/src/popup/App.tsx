@@ -93,6 +93,13 @@ export default function App() {
     setBookmarks((prev) => prev.filter((b) => b.id !== id))
   }, [])
 
+  const handleRename = useCallback(async (id: string, newTitle: string) => {
+    await db.update(id, { title: newTitle })
+    setBookmarks((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, title: newTitle } : b)),
+    )
+  }, [])
+
   // ─── Render ─────────────────────────────────────────────────
 
   const isDark =
@@ -129,7 +136,16 @@ export default function App() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
-          <span style={{ fontSize: '20px', marginRight: '8px' }}>⭐</span>
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="#10a37f"
+            xmlns="http://www.w3.org/2000/svg"
+            style={{ marginRight: '8px', flexShrink: 0 }}
+          >
+            <path d="M5 3a2 2 0 0 0-2 2v16l9-4 9 4V5a2 2 0 0 0-2-2H5z" />
+          </svg>
           <h1
             style={{
               margin: 0,
@@ -154,7 +170,7 @@ export default function App() {
         </div>
 
         {/* Search */}
-        <SearchBar value={query} onChange={setQuery} />
+        <SearchBar value={query} onChange={setQuery} isDark={isDark} />
 
         {/* Sort controls */}
         <div style={{ display: 'flex', gap: '6px' }}>
@@ -231,6 +247,8 @@ export default function App() {
                 bookmark={bookmark}
                 onJump={handleJump}
                 onDelete={handleDelete}
+                onRename={handleRename}
+                isDark={isDark}
               />
             ))}
           </>
@@ -314,12 +332,21 @@ function EmptyState({ query, colors }: EmptyStateProps) {
         padding: '0 24px',
       }}
     >
-      <span style={{ fontSize: '48px' }}>⭐</span>
+      <svg
+        width="48"
+        height="48"
+        viewBox="0 0 24 24"
+        fill="#10a37f"
+        xmlns="http://www.w3.org/2000/svg"
+        style={{ opacity: 0.4 }}
+      >
+        <path d="M5 3a2 2 0 0 0-2 2v16l9-4 9 4V5a2 2 0 0 0-2-2H5z" />
+      </svg>
       <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: colors.text }}>
         No bookmarks yet
       </p>
       <p style={{ margin: 0, fontSize: '13px', lineHeight: '1.5' }}>
-        Open ChatGPT and click the ⭐ button next to any message to bookmark it.
+        Open ChatGPT and click the bookmark button next to any message to save it.
       </p>
     </div>
   )

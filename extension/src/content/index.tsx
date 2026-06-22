@@ -10,6 +10,7 @@ import { initPageDetector, onPageEvent } from './pageDetector'
 import { parseMessages, getConversationIdFromUrl } from './domAdapter'
 import { injectBookmarkButton, removeAllBookmarkButtons } from './ui/BookmarkButton'
 import { checkPendingJump, jumpToBookmark } from './ui/highlighter'
+import { injectBookmarkPanel } from './ui/BookmarkPanel'
 import type { ChromeMessage, JumpToMessagePayload } from '../shared/types'
 
 // ─── Button Injection ─────────────────────────────────────────
@@ -66,6 +67,8 @@ function handlePageEvents(): void {
       case 'ConversationChanged':
         removeAllBookmarkButtons()
         scheduleInjection(1200)
+        // Re-inject panel for the new conversation
+        setTimeout(() => injectBookmarkPanel(), 1500)
         // Check for pending cross-conversation jump
         checkPendingJump()
         break
@@ -113,6 +116,9 @@ function init(): void {
   scheduleInjection(800)
   scheduleInjection(2000)
   scheduleInjection(4000)
+
+  // Inject the in-chat bookmark panel
+  setTimeout(() => injectBookmarkPanel(), 1500)
 }
 
 if (document.readyState === 'loading') {

@@ -7,9 +7,10 @@ interface SearchBarProps {
   value: string
   onChange: (value: string) => void
   placeholder?: string
+  isDark?: boolean
 }
 
-export function SearchBar({ value, onChange, placeholder = 'Search bookmarks…' }: SearchBarProps) {
+export function SearchBar({ value, onChange, placeholder = 'Search bookmarks…', isDark = false }: SearchBarProps) {
   return (
     <div style={{ position: 'relative', marginBottom: '12px' }}>
       <span
@@ -34,20 +35,21 @@ export function SearchBar({ value, onChange, placeholder = 'Search bookmarks…'
           width: '100%',
           padding: '8px 32px 8px 32px',
           borderRadius: '8px',
-          border: '1px solid rgba(0,0,0,0.12)',
+          border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
           fontSize: '13px',
           outline: 'none',
-          background: 'rgba(0,0,0,0.03)',
-          color: 'inherit',
+          background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)',
+          color: isDark ? '#ececec' : '#0d0d0d',
           transition: 'border-color 0.15s',
+          boxSizing: 'border-box',
         }}
         onFocus={(e) => {
           e.target.style.borderColor = '#10a37f'
-          e.target.style.background = 'transparent'
+          e.target.style.background = isDark ? 'rgba(255,255,255,0.08)' : 'transparent'
         }}
         onBlur={(e) => {
-          e.target.style.borderColor = 'rgba(0,0,0,0.12)'
-          e.target.style.background = 'rgba(0,0,0,0.03)'
+          e.target.style.borderColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'
+          e.target.style.background = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)'
         }}
       />
       {value && (
@@ -64,6 +66,7 @@ export function SearchBar({ value, onChange, placeholder = 'Search bookmarks…'
             fontSize: '12px',
             opacity: 0.5,
             padding: '2px',
+            color: isDark ? '#ececec' : '#0d0d0d',
           }}
           title="Clear search"
         >

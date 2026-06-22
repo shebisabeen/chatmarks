@@ -92,9 +92,44 @@ function BookmarkButton({ message, conversationId }: BookmarkButtonProps) {
       aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark this message'}
       aria-pressed={bookmarked}
     >
-      <span style={{ fontSize: '16px', lineHeight: 1 }}>
-        {loading ? '⏳' : bookmarked ? '⭐' : '☆'}
-      </span>
+      {loading ? (
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#10a37f"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle cx="12" cy="12" r="10" strokeOpacity="0.3" />
+          <path d="M12 2a10 10 0 0 1 10 10" />
+        </svg>
+      ) : bookmarked ? (
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="#10a37f"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path d="M5 3a2 2 0 0 0-2 2v16l9-4 9 4V5a2 2 0 0 0-2-2H5z" />
+        </svg>
+      ) : (
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)'}
+          strokeWidth="2"
+          strokeLinejoin="round"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path d="M5 3a2 2 0 0 0-2 2v16l9-4 9 4V5a2 2 0 0 0-2-2H5z" />
+        </svg>
+      )}
     </button>
   )
 }
