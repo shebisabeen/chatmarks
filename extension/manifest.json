@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ChatMarks",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Bookmark chat messages across ChatGPT, Claude & Gemini",
   "icons": {
     "16": "icons/icon16.png",
@@ -11,10 +11,8 @@
   },
   "permissions": [
     "storage",
-    "activeTab",
     "tabs",
-    "sidePanel",
-    "scripting"
+    "sidePanel"
   ],
   "host_permissions": [
     "https://chatgpt.com/*",

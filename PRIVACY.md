@@ -1,6 +1,6 @@
 # Privacy Policy — ChatMarks
 
-**Last Updated:** June 23, 2026
+**Last Updated:** June 24, 2026
 
 ChatMarks ("the Extension") is a Chrome browser extension that allows users to bookmark messages in AI chat platforms including ChatGPT, Claude, and Gemini.
 
@@ -36,10 +36,6 @@ The Extension requests the following Chrome permissions. Each is strictly necess
 
 Used to save and retrieve your bookmarks locally on your device via `chrome.storage.local`. This is the only place your bookmark data is stored — no external database or server is involved.
 
-### `activeTab`
-
-Required to identify which AI chat tab is currently active. This allows the Extension to correctly associate new bookmarks with the right conversation when you interact with the popup or side panel.
-
 ### `tabs`
 
 Used to navigate to the specific browser tab containing a bookmarked conversation and to scroll to the exact bookmarked message when you click "Jump to message" from the popup or side panel. The Extension reads tab URLs only to match them against saved bookmark URLs — it does not log, store, or transmit tab information.
@@ -47,10 +43,6 @@ Used to navigate to the specific browser tab containing a bookmarked conversatio
 ### `sidePanel`
 
 Enables the bookmark list to be displayed in Chrome's native side panel, giving you a persistent view of your bookmarks alongside the AI chat without needing to open a separate popup window.
-
-### `scripting`
-
-Required to inject the bookmark button UI (the ⭐ star icon) into ChatGPT, Claude, and Gemini pages so you can bookmark messages. Also used to execute scroll and highlight animations when jumping to a bookmarked message. Scripts are only injected into the four supported AI chat domains listed below.
 
 ### Host Permissions: `chatgpt.com`, `chat.openai.com`, `claude.ai`, `gemini.google.com`
 
